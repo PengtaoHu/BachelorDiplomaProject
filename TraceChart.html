@@ -1,0 +1,508 @@
+﻿<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+    .tooltip {
+        font-family: 'Arial Unicode MS';
+        font-size: 18px;
+        width: auto;
+        height: auto;
+        position: absolute;
+        text-align: left;
+        border-style: outset;
+        border-width: 1px;
+        background-color: khaki;
+        border-radius: 2px;
+        pointer-events: none;
+    }
+    .text{
+        font-family:'Arial Unicode MS';
+        font-size:18px;
+        pointer-events:none;
+    }
+</style>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>轨迹图</title>
+</head>
+<body>
+
+    <script src="/d3.min.js" charset="utf-8"></script>
+    <script>
+
+
+var width  = 1300;	//SVG绘制区域的宽度
+var height = 570;	//SVG绘制区域的高度
+
+var svg = d3.select("body")			//选择<body>
+			.append("svg")			//在<body>中添加<svg>
+			.attr("width", width)	//设定<svg>的宽度属性
+			.attr("height", height);//设定<svg>的高度属性
+
+var tooltip = d3.select("body")
+	.append("div")
+    .attr("class", "tooltip")
+	.style("opacity", 0.0);
+
+//外边框
+var padding = { top: 120, right: 850, bottom: 50, left: 50 };
+var xRange = width - padding.left - padding.right;
+var yRange = height - padding.top - padding.bottom;
+var color1 = d3.rgb(47, 63, 235);
+var color2 = d3.rgb(0, 176, 240);
+d3.json("1.json",function(error,indexset1){
+    d3.json("2.json", function (error, indexset2) {
+        d3.csv("2.csv",function(error,dataset2){
+            d3.csv("1.csv", function (error, dataset1) {
+                var length = +dataset1.length > +dataset2.length ? +dataset2.length : +dataset1.length;
+                var length0 = length;
+                var dataset = new Array();
+                var r0 = 3, r = 3;
+                var dataMax = +indexset1.max > +indexset2.max ? +indexset1.max : +indexset2.max;
+                var dataMin = +indexset1.min< +indexset2.min ? +indexset1.min : +indexset2.min;
+                for (var i = 0; i < length; i++)
+                    dataset[i] = { x: parseFloat(dataset1[i].data), y: parseFloat(dataset2[i].data) };
+                var xScale = d3.scaleLinear()
+                                    .domain([dataMax, dataMin])
+                                    .range([xRange, 0]);
+                var yScale = d3.scaleLinear()
+                                    .domain([dataMax, dataMin])
+                                    .range([yRange,0]);
+
+                //x轴
+                var xAxis = d3.axisBottom()
+                            .scale(xScale)
+                            .tickSize(-15)
+                            .ticks(10);
+
+                var xAxis2 = d3.axisTop()
+                            .scale(xScale)
+                            .tickSize(-15)
+                            .ticks(10);
+                //y轴
+                var yAxis = d3.axisLeft()
+                            .scale(yScale)
+                            .tickSize(-15)
+                            .ticks(10);
+
+                var yAxis2 = d3.axisRight()
+                            .scale(yScale)
+                            .tickSize(-15)
+                            .ticks(10);
+
+                var all = svg.append("g")
+                .attr("id", "all");
+                var xG=svg.append("g")
+                        .attr("class", "axis")
+                        .attr("transform", "translate(" + padding.left + "," + (height - padding.bottom) + ")")
+                        .call(xAxis);
+
+                var xG2 = svg.append("g")
+                        .attr("class", "axis")
+                        .attr("transform", "translate(" + padding.left + "," + padding.top + ")")
+                        .call(xAxis2);
+
+                var xText = svg.append("text")
+                .attr("class","text")
+                .attr("transform", "translate(" + (width-padding.left-padding.right)/2 + "," + (height - padding.bottom) + ")")
+                .attr("x", 0)
+                .attr("y", 30)
+                .style("text-anchor","middle")
+                .text("位移/ɥm");
+
+                var yG=svg.append("g")
+                        .attr("class", "axis")
+                        .attr("transform", "translate(" + padding.left + "," + padding.top + ")")
+                        .call(yAxis);
+
+                var yG2 = svg.append("g")
+                        .attr("class", "axis")
+                        .attr("transform", "translate(" + (width-padding.right) + "," + padding.top + ")")
+                        .call(yAxis2);
+
+                var yText = svg.append("text")
+                .attr("class","text")
+                .attr("transform", "translate(" + padding.left + "," + height/2 + ")")
+                .attr("x", -30)
+                .attr("y", 0)
+                .style("writing-mode","tb")
+                .style("text-anchor", "middle")
+                .text("位移/ɥm");
+
+                //创建一个直线生成器
+                var linePath = d3.line()
+                                .x(function (d) { return xScale(d.x); })
+                                .y(function (d) { return yScale(d.y)-yRange; })
+                                .curve(d3.curveLinear);
+
+                function draw(dataset) {
+                    all.selectAll(".point")
+                    .remove();
+                    var pointUpdate = all.selectAll(".point")
+                    .data(dataset);
+                    var pointEnter = pointUpdate.enter();
+                    
+                    var enterpoints = pointEnter.append("circle")
+                    .attr("transform", function (d) { return "translate(" + padding.left + "," + (height - padding.bottom) + ")"; })
+                    .attr("class", "point")
+                    .attr("r", r)
+                    .attr("cx", function (d) { return xScale(d.x); })
+                    .attr("cy", function (d) { return yScale(d.y)-yRange})
+                    .attr("fill", "black")
+                    .style("fill-opacity", 0)
+                    .on("mouseover", function (d) {
+                        tooltip.html(d.x.toFixed(2) + "    " + d.y.toFixed(2))
+                            .style("left", (d3.event.pageX + 20) + "px")
+                            .style("top", (d3.event.pageY - 20) + "px")
+                            .style("opacity", 1.0);
+                    })
+                    .on("mouseout", function (d) {
+                        var o = d3.select(this);
+                        tooltip.style("opacity", 0);
+                    });
+                    
+                    all.selectAll(".link0")
+                    .remove();
+                    all.selectAll(".link")
+                    .remove();
+                    var linkUpdate = all.selectAll(".link")	
+                    .data(dataset);		
+                    var linkEnter = linkUpdate.enter();			
+
+                    linkEnter.append("line")		
+                    .attr("class", "link")
+                    .attr("transform", "translate(" + padding.left + "," + (height - padding.bottom) + ")")
+                    .attr("x1", function (d) { return xScale(d.x); })
+                    .attr("x2", function (d, i) {
+                        var temp = dataset[i + 1];
+                        if (temp == undefined)
+                            return xScale(d.x);
+                        else return xScale(temp.x);
+                    })
+                    .attr("y1", function (d) { return yScale(d.y)-yRange; })
+                    .attr("y2", function (d, i) {
+                        var temp = dataset[i + 1];
+                        if (temp == undefined)
+                            return yScale(d.y)-yRange;
+                        else return yScale(temp.y)-yRange;
+                    })
+                    .attr("stroke", color1)
+                    .attr("stroke-width", 0.1);
+                }
+
+                var stayX = 550;
+                var filter_size = 10;
+                function dragbar(k) {
+                    var dragBar = d3.drag()
+                    .on("start", function (d) {
+                        d3.select(this)
+                        .attr("fill", "lightgreen");
+                    });
+
+                    var group = svg.append("g");
+
+                    var staybar = group.append("rect")
+                        .attr("x", stayX)
+                        .attr("y", padding.top+200 + k * 50 + 5)
+                        .attr("height", 20)
+                        .attr("width", 210)
+                        .attr("fill", "khaki")
+                        .style("fill-opacity", 1);
+
+                    var movebar = group.append("rect")
+                        .attr("x", stayX)
+                        .attr("y", padding.top+200 + k * 50)
+                        .attr("height", 30)
+                        .attr("width", 10)
+                        .attr("fill", "green")
+                        .style("fill-opacity", 1)
+                        .call(dragBar);
+
+                    var text = group.append("text")
+                    .attr("class","text")
+                    .attr("id","bartext"+k)
+                    .attr("x", stayX + 230)
+                    .attr("y", padding.top+200 + k * 50 + 15);
+                    return dragBar;
+                }
+
+                draw(dataset);
+                var bar0 = dragbar(0);
+                d3.select("#bartext0")
+                    .text(1);
+                bar0.on("drag", function () {
+
+                    var o = d3.select(this);
+                    var xx = d3.event.x - o.attr("width") / 2;
+                    xx = xx < stayX ? stayX : xx;
+                    xx = xx > stayX + 210 ? stayX + 210 : xx;
+                    o.attr("x", xx);
+
+                    var k = Math.round(Math.pow(length, (o.attr("x") - stayX) / 200));
+                    k = k > length ? length : k;
+                    d3.select("#bartext0")
+                    .text(k);
+
+                });
+                bar0.on("end", function () {
+                    var o = d3.select(this);
+                    o.attr("fill", "green");
+
+                    var k = Math.round(Math.pow(length, (o.attr("x") - stayX) / 200));
+                    k = k > length ? length : k;
+                    dataset = Ddataset(k);
+                    draw(dataset);
+                    length0 = dataset.length;
+
+                    d3.select("#bartext0")
+                    .text(k);
+
+                    
+                });
+
+                function Ddataset(k) {
+                    var Dlength = Math.floor(length / k);
+                    var Ddataset = new Array(Dlength);
+                    var count = 0;
+                    for (var i = 0; i < Dlength; i++) {
+                        Ddataset[i] = { x: 0, y: 0 };
+                        for (var j = 0; j < k; j++) {
+                            Ddataset[i].x += parseFloat(dataset1[count].data);
+                            Ddataset[i].y += parseFloat(dataset2[count++].data);
+                        }
+                        Ddataset[i].x /= k;
+                        Ddataset[i].y /= k;
+                    }
+                    return Ddataset;
+                }
+
+                var bar1 = dragbar(1);
+                d3.select("#bartext1")
+                    .text("all");
+                bar1.on("drag", function () {
+
+                    var o = d3.select(this);
+                    var xx = d3.event.x - o.attr("width") / 2;
+                    xx = xx < stayX ? stayX : xx;
+                    xx = xx > stayX + 210 ? stayX + 210 : xx;
+                    o.attr("x", xx);
+
+                    filter_pos = (o.attr("x") - stayX) / 200;
+                    var filter_min = Math.round(length0 * filter_pos);
+                    var filter_max = filter_min + filter_size;
+                    all.selectAll(".link0").attr("class", "link");
+                    if (filter_max > length0) {
+                        var selectlines = svg.selectAll(".link")
+                        .attr("stroke", color1)
+                        .attr("stroke-width", 0.1);
+                    }
+                    else filter();
+
+                    d3.select("#bartext1")
+                    .text(function () {
+                        if (filter_max > length0)
+                            return "all";
+                        else return filter_min;
+                    });
+                });
+                bar1.on("end", function (d) {
+                    var o = d3.select(this);
+                    o.attr("fill", "green");
+                });
+                
+                var bar2 = dragbar(2);
+                d3.select("#bartext2")
+                    .text(filter_size);
+                bar2.on("drag", function (d) {
+
+                    var o = d3.select(this);
+                    var xx = d3.event.x - o.attr("width") / 2;
+                    xx = xx < stayX ? stayX : xx;
+                    xx = xx > stayX + 210 ? stayX + 210 : xx;
+                    o.attr("x", xx);
+
+                    var k = (o.attr("x") - stayX) / 200;
+                    filter_size = Math.round(Math.pow(400, (o.attr("x") - stayX) / 200));
+
+                    d3.select("#bartext2")
+                    .text(filter_size);
+
+                    filter();
+
+                });
+                bar2.on("end", function (d) {
+                    var o = d3.select(this);
+                    o.attr("fill", "green");
+                    
+
+                })
+
+                function filter()
+                {
+                    var filter_min = Math.round(length0 * filter_pos);
+                    var filter_max = filter_min + filter_size;
+                    all.selectAll(".link0").attr("class", "link");
+                    if (filter_max > length0) {
+                        var selectlines = svg.selectAll(".link")
+                        .attr("stroke", color1)
+                        .attr("stroke-width", 0.1);
+                    }
+                    else {
+                        all.selectAll(".link0").attr("class", "link");
+                        var selectlines = all.selectAll(".link")
+                            .attr("class", "link")
+                            .attr("stroke-width", 0)
+                            .filter(function (d, i) { if (i >= filter_min && i < filter_max) return 1; else return 0; })
+                            .attr("class", "link0")
+                            .attr("stroke-width", function (d, i) { return 1 / transK * (1 + i / filter_size); })
+                            .attr("stroke", function (d, i) {
+                                return "black";
+                            });
+                    }
+                }
+                //动画
+                {
+                    var button0 = svg.append("rect")
+                    .attr("x", stayX + 170)
+                    .attr("y", padding.top+20)
+                    .attr("height", 30)
+                    .attr("width", 30)
+                    .attr("fill", "grey")
+                    .style("fill-opacity", 1)
+                    .on("click", function () { animation(dataset); });
+                    var move = 0;
+                    function animation(dataset) {
+                        if (move == 0)
+                            move = 1;
+                        else {
+                            move = 0;
+                            return 0;
+                        }
+
+                        all.selectAll(".point")
+                        .remove();
+
+                        var movepoint = all.append("circle")
+                        .attr("class", "point")
+                        .attr("id", "movepoint")
+                        .attr("r", r)
+                        .attr("transform", function (d) { return "translate(" + padding.left + "," + (height - padding.bottom) + ")"; })
+                        .attr("cx", xScale(dataset[0].x))
+                        .attr("cy", yScale(dataset[0].y)-yRange)
+                        .attr("fill", "black")
+                        .style("fill-opacity", 1);
+
+                        var i = 1;
+                        var m = d3.interval(movement, 210);
+                        function movement() {
+                            if (i < dataset.length && move == 1) {
+                                movepoint.transition()
+                                .duration(200)
+                                .ease(d3.easeLinear)
+                                .attr("cx", xScale(dataset[i].x))
+                                .attr("cy", yScale(dataset[i].y)-yRange);
+                                i++;
+                            }
+                            else {
+                                movepoint.remove();
+                                m.stop();
+                            }
+                        }
+                    }
+                }
+
+                
+                var transK = 1;
+                var transX = 0;
+                var transY = 0;
+                svg.call(d3.zoom()
+                .scaleExtent([1 / 2, 200])
+                 .on("zoom", function () {
+                     transK = d3.event.transform.k;
+                     transX = d3.event.transform.x;
+                     transY = d3.event.transform.y;
+                     all.attr("transform", d3.event.transform);
+                     var points = d3.selectAll(".point");
+                     r = r0 / d3.event.transform.k;
+                     points.attr("r", r);
+                     var links = d3.selectAll(".link0");
+                     links.attr("stroke-width", 1 / d3.event.transform.k);
+                     xG.call(xAxis.scale(d3.event.transform.rescaleX(xScale)));
+                     yG.call(yAxis.scale(d3.event.transform.rescaleY(yScale)));
+                     xG2.call(xAxis2.scale(d3.event.transform.rescaleX(xScale)));
+                     yG2.call(yAxis2.scale(d3.event.transform.rescaleY(yScale)));
+                 }));
+
+                //显示坐标
+                {
+                    svg.on("mousemove", function () {
+                        var xx = d3.event.pageX - padding.left - 8;
+                        var yy = height - padding.bottom - d3.event.pageY + 8;
+                        var rr = Math.sqrt(Math.pow(xx - 200, 2) + Math.pow(yy - 200, 2));
+                        var a = 0;
+                        if (xx > 200 && yy >= 200)
+                            a = Math.asin((xx - 200) / rr);
+                        if (xx >= 200 && yy < 200)
+                            a = Math.PI - Math.asin((xx - 200) / rr);
+                        if (xx < 200 && yy <= 200)
+                            a = Math.PI + Math.asin((200 - xx) / rr);
+                        if (xx <= 200 && yy > 200)
+                            a = 2 * Math.PI - Math.asin((200 - xx) / rr);
+                        a = a / Math.PI * 180;
+                        d3.select("#textPosition0")
+                        .text("x:" + (xx-200)+"px");
+                        d3.select("#textPosition1")
+                        .text("y:" + (yy-200)+"px");
+                        d3.select("#textPosition2")
+                        .text("r:" + rr.toFixed(2)+"px");
+                        d3.select("#textPosition3")
+                        .text("θ:" + a.toFixed(2) + "°");
+                    });
+
+                    var textPosition = svg.append("g")
+                    .attr("transform", "translate(" + stayX + "," + padding.top + ")");
+
+
+                    for (var u = 0; u < 4; u++)
+                        textPosition.append("text")
+                        .attr("class", "text")
+                        .attr("id", "textPosition" + u)
+                        .attr("x", 0)
+                        .attr("y", 50 * u+20);
+                }
+                var gMark = svg.append("g");
+                var markStep = 150, i = 0;
+                gMark.append("text")
+                    .attr("class", "text")
+                    .attr("dx", 20)
+                    .attr("dy", 40)
+                    .text("X轴：");
+                for (var feature in indexset1) {
+                    gMark.append("text")
+                    .attr("class", "text")
+                    .attr("dx", padding.left + markStep * i++ +100)
+                    .attr("dy", 40)
+                    .text(feature + ":" + indexset1[feature]);
+                }
+                i = 0;
+                gMark.append("text")
+                    .attr("class", "text")
+                    .attr("dx", 20)
+                    .attr("dy", 70)
+                    .text("Y轴：");
+                for (var feature in indexset2) {
+                    gMark.append("text")
+                    .attr("class", "text")
+                    .attr("dx", padding.left + markStep * i++ +100)
+                    .attr("dy", 70)
+                    .text(feature + ":" + indexset2[feature]);
+                }
+            })
+        })
+    })
+})
+
+    </script>
+
+</body>
+</html>
