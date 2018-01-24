@@ -1,2 +1,2 @@
 # BachelorDiplomaProject
-My Bachelor Diploma Project.
+Parts of code of my Bachelor Diploma Project.
